@@ -9,17 +9,36 @@ contain a "wrapper\_template" frontmatter key.
 
 ## Usage
 
-*Coming soon*
+To register the template finder in your Flask app you need to register the template folder in the application config, and specify which routes should be handled by it.
+The following example will handle everything via the templatefinder:
+
+```
+from canonicalwebteam.templatefinder import TemplateFinder
+
+TEMPLATE_FOLDER = 
+
+app = Flask(
+    template_folder="templates",
+    static_folder="static",
+)
+app.config["TEMPLATE_FOLDER"] = "templates"
+
+template_finder_view = TemplateFinder.as_view("template_finder")
+app.add_url_rule("/", view_func=template_finder_view)
+app.add_url_rule("/<path:subpath>", view_func=template_finder_view)
+```
 
 ## Template matching
 
-When the app parses a URL, it will look for templates in the following
-locations, in order:
+The templatefinder can be used to automatically map `.html` and `.md` files to url on a website.
+When included the finder will search for files at the given url in a specified template directory.
 
--   `/parent/location/` =&gt; `templates/parent/location.html`
--   `/parent/location/` =&gt; `templates/parent/location/index.html`
--   `/parent/location/` =&gt; `templates/parent/location.md`
--   `/parent/location/` =&gt; `templates/parent/location/index.md`
+E.g. `localhost/pages/test` will look for the following files, in order:
+
+- `$TEMPLATE_FOLDER/pages/test.html`
+- `$TEMPLATE_FOLDER/pages/test/index.html`
+- `$TEMPLATE_FOLDER/pages/test.md`
+- `$TEMPLATE_FOLDER/pages/test/index.md`
 
 ## Markdown parsing
 
@@ -61,3 +80,6 @@ Welcome to my website.
 
 I also have [a GitHub page](https://github.com/me).
 ```
+
+## Tests
+Tests can be run with pytest. This module is using [poetry](https://poetry.eustace.io/), so you can use `poetry run pytest` to execute them easily.

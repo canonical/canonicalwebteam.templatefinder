@@ -82,4 +82,9 @@ I also have [a GitHub page](https://github.com/me).
 ```
 
 ## Tests
-Tests can be run with pytest.
+Tests can be run with pytest:
+
+``` bash
+pip3 install -r requirements.txt
+python3 -m pytest test
+```

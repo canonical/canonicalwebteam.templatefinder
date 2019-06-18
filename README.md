@@ -24,7 +24,7 @@ app = Flask(
 app.config["TEMPLATE_FOLDER"] = "templates"
 
 template_finder_view = TemplateFinder.as_view("template_finder")
-app.add_url_rule("/", view_func=template_finder_view)
+app.add_url_rule("/", view_fun  c=template_finder_view)
 app.add_url_rule("/<path:subpath>", view_func=template_finder_view)
 ```
 
@@ -82,4 +82,4 @@ I also have [a GitHub page](https://github.com/me).
 ```
 
 ## Tests
-Tests can be run with pytest. This module is using [poetry](https://poetry.eustace.io/), so you can use `poetry run pytest` to execute them easily.
+Tests can be run with pytest.

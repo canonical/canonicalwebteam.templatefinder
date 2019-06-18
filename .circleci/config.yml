@@ -25,8 +25,8 @@ jobs:
           name: Install the module
           command: pip3 install .
       - run:
-          name: Install development dependencies
-          command: pip3 install -r requirements.txt
+          name: Install dependencies for running tests
+          command: pip3 install pytest flask_testing requests
       - run:
           name: Run tests with pytest
           command: pytest tests

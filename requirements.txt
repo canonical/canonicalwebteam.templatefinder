@@ -1,0 +1,6 @@
+# Development dependencies
+flake8
+black
+pytest
+flask_testing
+requests

@@ -33,22 +33,24 @@ class TemplateFinder(View):
             abort(404, f"Can't find page for: {path}")
 
         if matching_template[-2:] == "md":
-            with open(
-                f"{current_app.template_folder}/{matching_template}"
-            ) as f:
-                file_content = f.read()
-                parsed_file = load_frontmatter_from_markdown(file_content)
-                wrapper_template = parsed_file.metadata.get("wrapper_template")
+            loader = current_app.jinja_loader
+            file_content = loader.get_source({}, template=matching_template)[0]
+            parsed_file = load_frontmatter_from_markdown(file_content)
+            wrapper_template = parsed_file.metadata.get("wrapper_template")
 
-                if not wrapper_template or not os.path.isfile(
-                    current_app.template_folder + "/" + wrapper_template
-                ):
-                    abort(404, f"Can't find page for: {path}")
+            if not wrapper_template:
+                return abort(404, f"Can't find page for: {path}")
 
-                context = parsed_file.metadata.get("context", {})
-                return self._render_markdown(
-                    parsed_file.content, wrapper_template, context
-                )
+            # Check wrapper template can be loaded
+            try:
+                loader.get_source({}, template=wrapper_template)
+            except TemplateNotFound:
+                return abort(404, f"Can't find page for: {path}")
+
+            context = parsed_file.metadata.get("context", {})
+            return self._render_markdown(
+                parsed_file.content, wrapper_template, context
+            )
 
         return render_template(matching_template, **self._get_context())
 

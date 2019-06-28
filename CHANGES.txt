@@ -1,2 +1,3 @@
 v0.1.0, 2019-06-14 -- Basic Flask module extracted from canonical.com codebase
 v0.1.1, 2019-06-18 -- Add README to pypi
+v0.1.2, 2019-06-28 -- Allow the view to work if you specify a relative templates path

@@ -1,12 +1,26 @@
 import os
 
-import bleach
-
 from flask import abort, current_app, render_template, request
 from flask.views import View
 from frontmatter import loads as load_frontmatter_from_markdown
 from jinja2.exceptions import TemplateNotFound
-from mistune import Markdown
+from mistune import Markdown, BlockLexer
+
+
+class WebteamBlockLexer(BlockLexer):
+    list_rules = (
+        "newline",
+        "block_code",
+        "fences",
+        "lheading",
+        "hrule",
+        "table",
+        "nptable",
+        "block_quote",
+        "list_block",
+        "block_html",
+        "text",
+    )
 
 
 class TemplateFinder(View):
@@ -17,7 +31,9 @@ class TemplateFinder(View):
 
     def __init__(self):
         self.markdown_parser = Markdown(
-            parse_block_html=True, parse_inline_html=True
+            parse_block_html=True,
+            parse_inline_html=True,
+            block=WebteamBlockLexer(),
         )
 
     def dispatch_request(self, *args, **kwargs):
@@ -38,21 +54,27 @@ class TemplateFinder(View):
             parsed_file = load_frontmatter_from_markdown(file_content)
             wrapper_template = parsed_file.metadata.get("wrapper_template")
 
-            if not wrapper_template:
+            if not (
+                wrapper_template and self._template_exists(wrapper_template)
+            ):
                 return abort(404, f"Can't find page for: {path}")
 
-            # Check wrapper template can be loaded
-            try:
-                loader.get_source({}, template=wrapper_template)
-            except TemplateNotFound:
-                return abort(404, f"Can't find page for: {path}")
+            context = self._get_context()
 
-            context = parsed_file.metadata.get("context", {})
-            return self._render_markdown(
-                parsed_file.content, wrapper_template, context
-            )
+            context["content"] = self.markdown_parser(parsed_file.content)
 
-        return render_template(matching_template, **self._get_context())
+            # Add any Markdown includes
+            for key, path in parsed_file.metadata.get(
+                "markdown_includes", {}
+            ).items():
+                content = loader.get_source({}, template=path)[0]
+                context[key] = self.markdown_parser(content)
+
+            # Add context from frontmatter
+            context.update(parsed_file.metadata.get("context", {}))
+            return render_template(wrapper_template, **context)
+        else:
+            return render_template(matching_template, **self._get_context())
 
     def _get_context(self):
         context = {}
@@ -90,17 +112,3 @@ class TemplateFinder(View):
             return False
 
         return True
-
-    def _render_markdown(self, markdown, wrapper_file, context={}):
-        """
-        :param markdown: Markdown to be rendered
-        :param wrapper_file: The wrapper for the Markdown content
-        :param context: Optional preexisting context
-        """
-
-        clean_markdown = bleach.clean(markdown)
-        rendered_markdown = self.markdown_parser(clean_markdown)
-
-        context = {"content": rendered_markdown}
-
-        return render_template(wrapper_file, **context)

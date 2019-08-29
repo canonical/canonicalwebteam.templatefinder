@@ -47,12 +47,9 @@ will look for the following keys in [YAML
 frontmatter](https://jekyllrb.com/docs/front-matter/):
 
 -   `wrapper_template` *mandatory*: (e.g.:
-    `wrapper_template: /includes/markdown-wrapper.html`) A path to an
-    HTML template within which to place the parsed markdown content. If
-    the path doesn't have a leading slash (e.g.
-    "templates/template.html" or "../templates/template.html"), then
-    `TemplateFinder` will search for the template relative to the
-    location of the Markdown file in question. If the path
+    `wrapper_template: includes/markdown-wrapper.html`) A path to an
+    HTML template within which to place the parsed markdown content.
+    This path must be relative to Flask's `template_folder` root.
 -   `context` *optional*: (e.g.:
     `context: {title: "Welcome", description: "A welcome page"}`) A
     dictionary of extra key / value pairs to pass through to the
@@ -61,12 +58,13 @@ frontmatter](https://jekyllrb.com/docs/front-matter/):
     A mapping of key names to template paths pointing to Markdown files
     to include. Each template path will be parsed, the resulting HTML
     will be passed in the template context, under the relevant key.
+    Paths must be relative to Flask's `template_folder` root.
 
 Here's an example Markdown file:
 
 ``` markdown
 ---
-wrapper_template: "/includes/markdown-wrapper.html"
+wrapper_template: "includes/markdown-wrapper.html"
 markdown_includes:
   nav: "includes/nav.md"
 context:

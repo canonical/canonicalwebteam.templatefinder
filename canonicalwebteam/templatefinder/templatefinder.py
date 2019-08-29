@@ -1,12 +1,26 @@
 import os
 
-import bleach
-
 from flask import abort, current_app, render_template, request
 from flask.views import View
 from frontmatter import loads as load_frontmatter_from_markdown
 from jinja2.exceptions import TemplateNotFound
-from mistune import Markdown
+from mistune import Markdown, BlockLexer
+
+
+class WebteamBlockLexer(BlockLexer):
+    list_rules = (
+        "newline",
+        "block_code",
+        "fences",
+        "lheading",
+        "hrule",
+        "table",
+        "nptable",
+        "block_quote",
+        "list_block",
+        "block_html",
+        "text",
+    )
 
 
 class TemplateFinder(View):
@@ -17,7 +31,9 @@ class TemplateFinder(View):
 
     def __init__(self):
         self.markdown_parser = Markdown(
-            parse_block_html=True, parse_inline_html=True
+            parse_block_html=True,
+            parse_inline_html=True,
+            block=WebteamBlockLexer(),
         )
 
     def dispatch_request(self, *args, **kwargs):
@@ -98,8 +114,7 @@ class TemplateFinder(View):
         :param context: Optional preexisting context
         """
 
-        clean_markdown = bleach.clean(markdown)
-        rendered_markdown = self.markdown_parser(clean_markdown)
+        rendered_markdown = self.markdown_parser(markdown)
 
         context = {"content": rendered_markdown}
 

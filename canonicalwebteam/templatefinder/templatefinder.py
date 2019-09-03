@@ -1,6 +1,8 @@
+# Standard library
 import os
 
-from flask import abort, current_app, render_template, request
+# Packages
+import flask
 from flask.views import View
 from frontmatter import loads as load_frontmatter_from_markdown
 from jinja2.exceptions import TemplateNotFound
@@ -42,14 +44,14 @@ class TemplateFinder(View):
         It tries to find the template for the request path
         and then passes that template name to TemplateView to render
         """
-        path = request.path.lstrip("/")
+        path = flask.request.path.lstrip("/")
         matching_template = self._get_template(path)
 
         if not matching_template:
-            abort(404, f"Can't find page for: {path}")
+            flask.abort(404, f"Can't find page for: {path}")
 
         if matching_template[-2:] == "md":
-            loader = current_app.jinja_loader
+            loader = flask.current_app.jinja_loader
             file_content = loader.get_source({}, template=matching_template)[0]
             parsed_file = load_frontmatter_from_markdown(file_content)
             wrapper_template = parsed_file.metadata.get("wrapper_template")
@@ -57,11 +59,9 @@ class TemplateFinder(View):
             if not (
                 wrapper_template and self._template_exists(wrapper_template)
             ):
-                return abort(404, f"Can't find page for: {path}")
+                return flask.abort(404, f"Can't find page for: {path}")
 
             context = self._get_context()
-
-            context["content"] = self.markdown_parser(parsed_file.content)
 
             # Add any Markdown includes
             for key, path in parsed_file.metadata.get(
@@ -72,13 +72,23 @@ class TemplateFinder(View):
 
             # Add context from frontmatter
             context.update(parsed_file.metadata.get("context", {}))
-            return render_template(wrapper_template, **context)
+
+            # Parse the markdown
+            # === Now parse with template ===
+            parsed_content = flask.render_template_string(
+                parsed_file.content, **context
+            )
+            context["content"] = self.markdown_parser(parsed_content)
+
+            return flask.render_template(wrapper_template, **context)
         else:
-            return render_template(matching_template, **self._get_context())
+            return flask.render_template(
+                matching_template, **self._get_context()
+            )
 
     def _get_context(self):
         context = {}
-        clean_path = request.path.strip("/")
+        clean_path = flask.request.path.strip("/")
         for index, path in enumerate(clean_path.split("/")):
             context["level_" + str(index + 1)] = path
         return context
@@ -105,7 +115,7 @@ class TemplateFinder(View):
         Check if a template exists
         without raising an exception
         """
-        loader = current_app.jinja_loader
+        loader = flask.current_app.jinja_loader
         try:
             loader.get_source({}, template=path)
         except TemplateNotFound:

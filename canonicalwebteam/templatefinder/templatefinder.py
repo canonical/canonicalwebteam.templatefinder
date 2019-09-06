@@ -61,20 +61,22 @@ class TemplateFinder(View):
             ):
                 return flask.abort(404, f"Can't find page for: {path}")
 
+            # Get context from Flask, and update with context from frontmatter
             context = self._get_context()
+            context.update(parsed_file.metadata.get("context", {}))
 
-            # Add any Markdown includes
+            # Add any Markdown includes to context
+            # Make sure to run them through the template parser too
             for key, path in parsed_file.metadata.get(
                 "markdown_includes", {}
             ).items():
                 content = loader.get_source({}, template=path)[0]
-                context[key] = self.markdown_parser(content)
-
-            # Add context from frontmatter
-            context.update(parsed_file.metadata.get("context", {}))
+                parsed_content = flask.render_template_string(
+                    content, **context
+                )
+                context[key] = self.markdown_parser(parsed_content)
 
             # Parse the markdown
-            # === Now parse with template ===
             parsed_content = flask.render_template_string(
                 parsed_file.content, **context
             )

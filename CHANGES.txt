@@ -3,3 +3,4 @@ v0.1.1, 2019-06-18 -- Add README to pypi
 v0.1.2, 2019-06-28 -- Allow the view to work if you specify a relative templates path
 v0.2.0, 2019-08-29 -- Fix "context" and "markdown_includes" in Markdown files
 v0.2.1, 2019-09-03 -- Run Markdown file contents through template parser
+v0.2.2, 2019-09-05 -- Run markdown_includes through the templater parser

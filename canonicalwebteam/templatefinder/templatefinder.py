@@ -1,12 +1,13 @@
 # Standard library
 import os
+import re
 
 # Packages
 import flask
 from flask.views import View
 from frontmatter import loads as load_frontmatter_from_markdown
 from jinja2.exceptions import TemplateNotFound
-from mistune import Markdown, BlockLexer
+from mistune import Markdown, BlockLexer, Renderer
 
 
 class WebteamBlockLexer(BlockLexer):
@@ -25,6 +26,22 @@ class WebteamBlockLexer(BlockLexer):
     )
 
 
+class IDRenderer(Renderer):
+    def header(self, text, level, raw=None):
+        header_id = (text.replace(" ", "-")).lower()
+        header_id = re.sub("[^\w-]", "", header_id)
+        header_id = re.sub('<[^<]+?>', '', header_id)
+
+        text = "<h{} id={}>{}</h{}>".format(
+            level,
+            header_id,
+            text,
+            level
+        )
+
+        return text
+
+
 class TemplateFinder(View):
     """
     A TemplateView that guesses the template name based on the
@@ -36,6 +53,7 @@ class TemplateFinder(View):
             parse_block_html=True,
             parse_inline_html=True,
             block=WebteamBlockLexer(),
+            renderer=IDRenderer()
         )
 
     def dispatch_request(self, *args, **kwargs):

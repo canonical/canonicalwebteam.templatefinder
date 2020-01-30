@@ -29,17 +29,11 @@ class WebteamBlockLexer(BlockLexer):
 class IDRenderer(Renderer):
     def header(self, text, level, raw=None):
         header_id = (text.replace(" ", "-")).lower()
-        header_id = re.sub("[^\w-]", "", header_id)
-        header_id = re.sub('<[^<]+?>', '', header_id)
+        header_id = re.sub(r"<[^<]+?>", "", header_id)
+        header_id = re.sub(r"&[\w\d]+;", "", header_id)
+        header_id = re.sub(r"[^\w-]", "", header_id)
 
-        text = "<h{} id={}>{}</h{}>".format(
-            level,
-            header_id,
-            text,
-            level
-        )
-
-        return text
+        return f'<h{level} id="{header_id}">{text}</h{level}>'
 
 
 class TemplateFinder(View):
@@ -53,7 +47,7 @@ class TemplateFinder(View):
             parse_block_html=True,
             parse_inline_html=True,
             block=WebteamBlockLexer(),
-            renderer=IDRenderer()
+            renderer=IDRenderer(),
         )
 
     def dispatch_request(self, *args, **kwargs):

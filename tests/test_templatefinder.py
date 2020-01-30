@@ -41,14 +41,33 @@ class TestTemplateFinder(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.data,
-            b"<h1>MARKDOWN</h1>\n<h1>This is a markdown heading</h1>\n",
+            (
+                b"<h1>MARKDOWN</h1>\n"
+                b'<h1 id="this-is-a-markdown-heading">'
+                b"This is a markdown heading</h1>"
+            ),
         )
 
     def test_getting_nested_markdown(self):
         response = self.client.get("/nested/test")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            response.data, b"<h1>MARKDOWN</h1>\n<h1>This is a nested</h1>\n"
+            response.data,
+            (
+                b'<h1>MARKDOWN</h1>\n<h1 id="this-is-a-nested">'
+                b"This is a nested</h1>"
+            ),
+        )
+
+    def test_heading_id_with_special_chars(self):
+        response = self.client.get("/special-chars-test")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data,
+            (
+                b'<h1>MARKDOWN</h1>\n<h1 id="h1-with-special-chars">'
+                b"<code>&lt;h1&gt;</code> with 'special' chars</h1>"
+            ),
         )
 
     def test_get_markdown_with_missing_wrapper_metadata(self):

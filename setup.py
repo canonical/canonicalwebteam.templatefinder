@@ -20,4 +20,5 @@ setup(
         "python-frontmatter>=0.4.5",
         "bleach>=3.1",
     ],
+    tests_require=["Flask-Testing>=0.7.1"],
 )

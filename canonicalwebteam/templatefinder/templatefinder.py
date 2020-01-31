@@ -44,10 +44,8 @@ class TemplateFinder(View):
 
     def __init__(self):
         self.markdown_parser = Markdown(
-            parse_block_html=True,
-            parse_inline_html=True,
             block=WebteamBlockLexer(),
-            renderer=IDRenderer(),
+            renderer=IDRenderer(parse_block_html=True, parse_inline_html=True),
         )
 
     def dispatch_request(self, *args, **kwargs):

@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="canonicalwebteam.templatefinder",
-    version="0.2.4",
+    version="0.3.0",
     author="Canonical Webteam",
     url="https://github.com/canonical-webteam/templatefinder",
     packages=find_packages(),
@@ -16,7 +16,8 @@ setup(
     long_description_content_type="text/markdown",
     install_requires=[
         "Flask>=1.0",
-        "mistune>=0.8.4",
+        "werkzeug<=0.16"
+        "mistune>=2.0.0a2",
         "python-frontmatter>=0.4.5",
         "bleach>=3.1",
     ],

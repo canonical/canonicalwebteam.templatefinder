@@ -7,27 +7,11 @@ import flask
 from flask.views import View
 from frontmatter import loads as load_frontmatter_from_markdown
 from jinja2.exceptions import TemplateNotFound
-from mistune import Markdown, BlockLexer, Renderer
+from mistune import create_markdown, BlockParser, HTMLRenderer
 
 
-class WebteamBlockLexer(BlockLexer):
-    list_rules = (
-        "newline",
-        "block_code",
-        "fences",
-        "lheading",
-        "hrule",
-        "table",
-        "nptable",
-        "block_quote",
-        "list_block",
-        "block_html",
-        "text",
-    )
-
-
-class IDRenderer(Renderer):
-    def header(self, text, level, raw=None):
+class TemplateFinderHTMLRenderer(HTMLRenderer):
+    def heading(self, text, level, raw=None):
         header_id = (text.replace(" ", "-")).lower()
         header_id = re.sub(r"<[^<]+?>", "", header_id)
         header_id = re.sub(r"&[\w\d]+;", "", header_id)
@@ -43,9 +27,10 @@ class TemplateFinder(View):
     """
 
     def __init__(self):
-        self.markdown_parser = Markdown(
-            block=WebteamBlockLexer(),
-            renderer=IDRenderer(parse_block_html=True, parse_inline_html=True),
+        self.markdown_parser = create_markdown(
+            escape=True,
+            renderer=TemplateFinderHTMLRenderer(),
+            plugins=['footnotes', 'strikethrough', 'table', 'url'],
         )
 
     def dispatch_request(self, *args, **kwargs):

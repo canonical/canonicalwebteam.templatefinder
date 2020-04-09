@@ -110,6 +110,12 @@ class TemplateFinder(View):
         Given a basic path, find an HTML or Markdown file
         """
 
+        # If on part of the url has _ this means the accessed
+        # file is a partial
+        for url_part in url_path.split("/"):
+            if url_part.startswith("_"):
+                return None
+
         # Try to match HTML or Markdown files
         if self._template_exists(url_path + ".html"):
             return url_path + ".html"

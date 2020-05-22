@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="canonicalwebteam.templatefinder",
-    version="0.2.5",
+    version="1.0.0",
     author="Canonical Webteam",
     url="https://github.com/canonical-webteam/templatefinder",
     packages=find_packages(),

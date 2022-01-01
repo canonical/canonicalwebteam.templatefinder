@@ -16,7 +16,7 @@ setup(
     long_description_content_type="text/markdown",
     install_requires=[
         "Flask>=1.0",
-        "mistune==0.8.4",
+        "mistune==2.0.1",
         "python-frontmatter>=0.4.5",
         "bleach>=3.1",
     ],

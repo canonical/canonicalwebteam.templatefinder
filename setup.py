@@ -6,7 +6,7 @@ setup(
     name="canonicalwebteam.templatefinder",
     version="1.0.0",
     author="Canonical Webteam",
-    url="https://github.com/canonical-webteam/templatefinder",
+    url="https://github.com/canonical-web-and-design/canonicalwebteam.templatefinder",
     packages=find_packages(),
     description=(
         "A module which attempts to load the corresponding templates directly"

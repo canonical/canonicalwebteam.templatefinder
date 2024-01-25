@@ -5,10 +5,12 @@ from pathlib import Path
 
 
 BASE_TEMPLATES = ["templates/base.html", "templates/base_no_nav.html"]
-
-TEMPLATE_PREFIXES = ["base", "_base"]
-
-TAG_NAMES = ["name", "title", "description", "link"]
+TEMPLATE_PREFIXES = ["base", "_base", "one-column"]
+TAG_MAPPING = {
+    "title": ["title"],
+    "description": ["meta_description", "description"],
+    "link": ["meta_copydoc"],
+}
 
 
 def is_index(path):
@@ -31,29 +33,6 @@ def is_template(path):
         if path.name.startswith(prefix):
             return True
     return False
-
-
-def tags_found(tag_map, keys=TAG_NAMES):
-    """Return False if specified keys in a dictionary have None values"""
-    for key in keys:
-        if tag_map.get(key) is None:
-            return False
-    return True
-
-
-def clean_tag(tag):
-    """
-    TODO:
-    Remove nested tags from a given tag
-
-    e.g given the tags
-
-    "Search results{% if query %} for '{{ query }}'{% endif %}"
-    Return "Search results"
-
-    "{% if user_info %}Ubuntu Pro Dashboard{% else %}Ubuntu Pro{% endif %}"
-    Return "Ubuntu Pro Dashboard"
-    """
 
 
 def append_base_path(base, path_name):
@@ -90,46 +69,116 @@ def extends_base(path, base="templates"):
     return False
 
 
-def get_tags(path):
-    """Return title, description, link, children"""
-    tags = create_node()
+def resolve_if_tag(text):
+    """
+    If there is a '{% if * %}{% endif %}' tag within the data, resolve the
+    condition by taking the first branch, and return the result e.g
 
-    uri = str(path)
-    if uri.endswith("index.html"):
-        tags["name"] = str(path).replace("/index.html", "")
-    else:
-        tags["name"] = str(path).replace(".html", "")
+    "Search results{% if query %} for '{{ query }}'{% endif %}"
+    -> "Search results"
+
+    "{% if user_info %}Ubuntu Pro Dashboard{% else %}Ubuntu Pro{% endif %}"
+    -> "Ubuntu Pro Dashboard"
+    """
+    pattern = r"{% if .*? %}(.*?){% endif %}"
+    if match := re.search(pattern, text):
+        inner_text = match.group(1)
+        # If there is an else branch, return the first branch
+        if "else" in inner_text:
+            return inner_text.split("{% else")[0]
+        return inner_text
+    # If no match is found, return data
+    return text
+
+
+def extract_text_from_tag(tag, data):
+    """
+    Extract data from inside tags
+    """
+    search_string = "{{% block {0} *%}}(.*){{%( *)endblock".format(tag)
+    if data and (match := re.match(search_string, data.replace("\n", "  "))):
+        inner_text = match.group(1).strip()
+        # If there is an if tag within the data, resolve the condition
+        if "{% if" in inner_text:
+            return resolve_if_tag(inner_text)
+        return inner_text
+    # If no match is found, return data
+    return data
+
+
+def get_tags_rolling_buffer(path):
+    """
+    Parse an html file and return a dictionary of its tags
+    """
+
+    tags = create_node()
+    available_tags = list(TAG_MAPPING.keys())
+
+    # We create a map of the selected variants for each tag
+    variants_mapping = {v: "" for v in available_tags}
 
     with path.open("r") as f:
-        for line in f.readlines():
-            if match := re.search("{% block title %}(.*){% endblock", line):
-                tags["title"] = match.group(1)
-                continue
-            if match := re.search(
-                "{% block meta_description %}(.*){% endblock",
-                line,
-            ):
-                tags["description"] = match.group(1)
-                continue
-            if match := re.search(
-                "{% block meta_copydoc %}(.*){% endblock",
-                line,
-            ):
-                tags["link"] = match.group(1)
-                continue
+        for tag in available_tags:
+            buffer = []
+            is_buffering = False
+            tag_found = False
 
-            # If all tags are found, return
-            if tags_found(tags):
-                return tags
+            variants = TAG_MAPPING[tag]
 
-        return tags
+            for variant in variants:
+                is_buffering = False
+                # Return to start of file
+                f.seek(0)
+
+                for line in f.readlines():
+                    if is_buffering:
+                        buffer.append(line)
+
+                    if not is_buffering and (
+                        match := re.search(f"{{% block {variant}( *)%}}", line)
+                    ):
+                        # We remove line contents before the tag
+                        line = line[match.start() :]  # noqa: E203
+
+                        buffer.append(line)
+                        is_buffering = True
+                        variants_mapping[tag] = variant
+                        # current_tag = tag
+
+                    # We search for the end of the tag in the existing buffer
+                    buffer_string = "".join(buffer)
+                    if is_buffering and re.search(
+                        "(.*){%( *)endblock", buffer_string
+                    ):
+                        # We save the buffer contents to the tags dictionary
+                        tags[tag] = buffer_string
+
+                        # We extract the text within the tags
+                        tags[tag] = extract_text_from_tag(
+                            variants_mapping[tag], tags[tag]
+                        )
+
+                        # We now reset the buffer
+                        buffer = []
+                        is_buffering = False
+                        tag_found = True
+                        break
+
+                if tag_found:
+                    break
+
+    # We add the name from the path
+    raw_name = re.sub(r"(?i)(.html|index.html)", "", str(path))
+    tags["name"] = raw_name.split("/templates")[-1]
+
+    return tags
 
 
 def is_valid_page(path, extended_path, base="templates"):
     """
     Determine if path is a valid page. Pages are valid if:
     - They contain the same extended path as the index html.
-    - Or they extend from the base html.
+    - They extend from the base html.
     """
     if is_template(path):
         return False
@@ -175,10 +224,17 @@ def create_node():
 
 
 def scan_directory(path_name):
+    """
+    We scan a given directory for valid pages and return a tree
+    """
     node_path = Path(path_name)
     node = create_node()
     node["name"] = node_path.name
+
+    # We get the relative parent for the path
     base = node_path.parts[0]
+
+    # This will be the base html file extended by the index.html
     extended_path = None
 
     # Check if an index.html file exists in this directory
@@ -189,7 +245,7 @@ def scan_directory(path_name):
         # If the file is valid, add it as a child
         if is_valid_page(index_path, extended_path, base=base):
             # Get tags, add as child
-            tags = get_tags(index_path)
+            tags = get_tags_rolling_buffer(index_path)
             node = update_tags(node, tags)
 
     # Cycle through other files in this directory
@@ -198,7 +254,12 @@ def scan_directory(path_name):
         if child.is_file() and not is_index(child):
             # If the file is valid, add it as a child
             if is_valid_page(child, extended_path, base=base):
-                node["children"].append(get_tags(child))
+                child_tags = get_tags_rolling_buffer(child)
+
+                # If the child has no copydocs link, use the parent's link
+                if not child_tags.get("link") and node.get("link"):
+                    child_tags["link"] = node["link"]
+                node["children"].append(child_tags)
         # If the child is a directory, scan it
         if child.is_dir():
             child_node = scan_directory(str(child))

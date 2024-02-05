@@ -4,8 +4,12 @@ from contextlib import suppress
 from pathlib import Path
 
 
-BASE_TEMPLATES = ["templates/base.html", "templates/base_no_nav.html"]
-TEMPLATE_PREFIXES = ["base", "_base", "one-column"]
+BASE_TEMPLATES = [
+    "templates/base.html",
+    "templates/base_no_nav.html",
+    "templates/templates/one-column.html",
+]
+TEMPLATE_PREFIXES = ["base", "_base"]
 TAG_MAPPING = {
     "title": ["title"],
     "description": ["meta_description", "description"],
@@ -106,6 +110,16 @@ def extract_text_from_tag(tag, data):
     return data
 
 
+def get_extended_copydoc(path, base):
+    """
+    Get the copydoc for the extended file
+    """
+    with base.joinpath(path).open("r") as f:
+        file_data = f.read()
+        if match := re.search("{{% block meta_copydoc *%}}(.*){{%( *)endblock", file_data):
+            return match.group(1)
+
+
 def get_tags_rolling_buffer(path):
     """
     Parse an html file and return a dictionary of its tags
@@ -147,9 +161,7 @@ def get_tags_rolling_buffer(path):
 
                     # We search for the end of the tag in the existing buffer
                     buffer_string = "".join(buffer)
-                    if is_buffering and re.search(
-                        "(.*){%( *)endblock", buffer_string
-                    ):
+                    if is_buffering and re.search("(.*){%( *)endblock", buffer_string):
                         # We save the buffer contents to the tags dictionary
                         tags[tag] = buffer_string
 
@@ -174,7 +186,7 @@ def get_tags_rolling_buffer(path):
     return tags
 
 
-def is_valid_page(path, extended_path, base="templates"):
+def is_valid_page(path, extended_path):
     """
     Determine if path is a valid page. Pages are valid if:
     - They contain the same extended path as the index html.
@@ -190,7 +202,7 @@ def is_valid_page(path, extended_path, base="templates"):
                     return True
     # If the file does not share the extended path, check if it extends the
     # base html
-    return extends_base(path, base=base)
+    return extends_base(path)
 
 
 def get_extended_path(path):
@@ -223,7 +235,7 @@ def create_node():
     }
 
 
-def scan_directory(path_name):
+def scan_directory(path_name, base=None):
     """
     We scan a given directory for valid pages and return a tree
     """
@@ -232,7 +244,8 @@ def scan_directory(path_name):
     node["name"] = node_path.name
 
     # We get the relative parent for the path
-    base = node_path.parts[0]
+    if base is None:
+        base = node_path.absolute()
 
     # This will be the base html file extended by the index.html
     extended_path = None
@@ -243,7 +256,7 @@ def scan_directory(path_name):
         # Get the path extended by the index.html file
         extended_path = get_extended_path(index_path)
         # If the file is valid, add it as a child
-        if is_valid_page(index_path, extended_path, base=base):
+        if is_valid_page(index_path, extended_path):
             # Get tags, add as child
             tags = get_tags_rolling_buffer(index_path)
             node = update_tags(node, tags)
@@ -253,16 +266,16 @@ def scan_directory(path_name):
         # If the child is a file, check if it is a valid page
         if child.is_file() and not is_index(child):
             # If the file is valid, add it as a child
-            if is_valid_page(child, extended_path, base=base):
+            if is_valid_page(child, extended_path):
                 child_tags = get_tags_rolling_buffer(child)
 
                 # If the child has no copydocs link, use the parent's link
-                if not child_tags.get("link") and node.get("link"):
-                    child_tags["link"] = node["link"]
+                if not child_tags.get("link") and extended_path:
+                    child_tags["link"] = get_extended_copydoc(extended_path, base=base)
                 node["children"].append(child_tags)
         # If the child is a directory, scan it
         if child.is_dir():
-            child_node = scan_directory(str(child))
+            child_node = scan_directory(str(child), base=base)
             if child_node.get("title") or child_node.get("children"):
                 node["children"].append(child_node)
 

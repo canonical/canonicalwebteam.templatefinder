@@ -7,7 +7,7 @@ from pathlib import Path
 BASE_TEMPLATES = [
     "templates/base.html",
     "templates/base_no_nav.html",
-    "templates/templates/one-column.html",
+    "templates/one-column.html",
 ]
 TEMPLATE_PREFIXES = ["base", "_base"]
 TAG_MAPPING = {
@@ -283,5 +283,6 @@ def scan_directory(path_name, base=None):
 
 
 if __name__ == "__main__":
-    tree = scan_directory("templates")
+    import sys
+    tree = scan_directory(sys.argv[1])
     print(json.dumps(tree, indent=4))

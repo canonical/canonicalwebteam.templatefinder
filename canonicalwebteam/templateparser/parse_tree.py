@@ -265,9 +265,6 @@ def scan_directory(path_name, base=None):
     for child in node_path.iterdir():
         # If the child is a file, check if it is a valid page
 
-        if re.search(".*core/contact.*", str(child)):
-            pass
-
         if child.is_file() and not is_index(child):
             # If the file is valid, add it as a child
             if is_valid_page(child, extended_path):

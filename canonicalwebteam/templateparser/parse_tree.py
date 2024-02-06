@@ -116,7 +116,7 @@ def get_extended_copydoc(path, base):
     """
     with base.joinpath(path).open("r") as f:
         file_data = f.read()
-        if match := re.search("{{% block meta_copydoc *%}}(.*){{%( *)endblock", file_data):
+        if match := re.search("\{\% block meta_copydoc *\%\}(.*)\{\%( *)endblock", file_data):
             return match.group(1)
 
 
@@ -264,6 +264,10 @@ def scan_directory(path_name, base=None):
     # Cycle through other files in this directory
     for child in node_path.iterdir():
         # If the child is a file, check if it is a valid page
+
+        if re.search(".*core/contact.*", str(child)):
+            pass
+
         if child.is_file() and not is_index(child):
             # If the file is valid, add it as a child
             if is_valid_page(child, extended_path):
@@ -283,6 +287,8 @@ def scan_directory(path_name, base=None):
 
 
 if __name__ == "__main__":
+    # The script can be run using the path name e.g
+    # python3 canonicalwebteam/templateparser/parse_tree.py ~/ubuntu.com/templates/
     import sys
     tree = scan_directory(sys.argv[1])
     print(json.dumps(tree, indent=4))
